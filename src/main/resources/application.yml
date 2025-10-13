@@ -14,5 +14,9 @@ server:
   port: 8081
 
 jwt:
-  secret: my-secret-key-change-in-prod
+  secret: aZ9f3kxk2VaDKtp81Gxbs9pG2eJl/s4ToOlzuyJExQFkjgx6nYp57VNk7SLFCUKaiW1f5WJLx1TaMy8Q4Z6AOA==
   expiration: 3600000  # 1 hour in ms
+
+logging:
+  level:
+    org.springframework.security: DEBUG

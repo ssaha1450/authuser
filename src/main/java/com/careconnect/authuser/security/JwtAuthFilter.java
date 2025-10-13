@@ -25,6 +25,13 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     private final UserRepository userRepository;
 
     @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        String path = request.getRequestURI();
+        // ✅ Skip filtering for auth endpoints
+        return path.startsWith("/api/auth");
+    }
+
+    @Override
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
                                     FilterChain filterChain)
@@ -34,7 +41,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         String token = null;
         String username = null;
 
-        // ✅ Extract token from "Authorization: Bearer <token>"
+        // ✅ Extract token only if header is present
         if (header != null && header.startsWith("Bearer ")) {
             token = header.substring(7);
             try {
@@ -66,6 +73,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             }
         }
 
+        // ✅ This is VERY important: continue filter chain
         filterChain.doFilter(request, response);
     }
 }
