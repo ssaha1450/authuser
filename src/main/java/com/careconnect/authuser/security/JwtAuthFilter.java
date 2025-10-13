@@ -28,7 +28,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getRequestURI();
         // ✅ Skip filtering for auth endpoints
-        return path.startsWith("/api/auth");
+        return path.startsWith("/api/auth/**");
     }
 
     @Override
@@ -39,13 +39,13 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
         final String header = request.getHeader("Authorization");
         String token = null;
-        String username = null;
+        String userEmail = null;
 
         // ✅ Extract token only if header is present
         if (header != null && header.startsWith("Bearer ")) {
             token = header.substring(7);
             try {
-                username = jwtTokenUtil.getUsernameFromToken(token);
+                userEmail = jwtTokenUtil.getEmailFromToken(token);
             } catch (ExpiredJwtException ex) {
                 logger.warn("JWT expired: {}", ex);
             } catch (Exception ex) {
@@ -54,10 +54,10 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         }
 
         // ✅ Validate token and set authentication
-        if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            if (jwtTokenUtil.validateJwtToken(token)) {
+        if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+            if (jwtTokenUtil.validateToken(token)) {
                 com.careconnect.authuser.entity.User dbUser =
-                        userRepository.findByEmail(username).orElse(null);
+                        userRepository.findByEmail(userEmail).orElse(null);
 
                 if (dbUser != null && dbUser.isActive()) {
                     UsernamePasswordAuthenticationToken authToken =

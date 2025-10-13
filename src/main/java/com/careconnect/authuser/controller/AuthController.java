@@ -3,6 +3,7 @@ package com.careconnect.authuser.controller;
 import com.careconnect.authuser.dto.*;
 import com.careconnect.authuser.service.AuthService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -11,7 +12,8 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class AuthController {
 
-    private final AuthService authService;
+    @Autowired
+    private AuthService authService;
 
     @PostMapping("/register")
     public ResponseEntity<String> register(@RequestBody RegisterRequest request) {
@@ -20,7 +22,19 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<JwtResponse> login(@RequestBody LoginRequest request) {
+    public ResponseEntity<AuthResponse> login(@RequestBody LoginRequest request) {
         return ResponseEntity.ok(authService.login(request));
     }
+
+    @PostMapping("/refresh-token")
+    public ResponseEntity<AuthResponse> refreshToken(@RequestBody RefreshTokenRequest request) {
+        return ResponseEntity.ok(authService.refreshAccessToken(request.refreshToken()));
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<String> logout(@RequestBody LogoutRequest logoutRequest) {
+        authService.logout(logoutRequest.refreshToken());
+        return ResponseEntity.ok("Logged out successfully!");
+    }
+
 }

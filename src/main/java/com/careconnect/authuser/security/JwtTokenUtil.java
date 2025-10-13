@@ -12,31 +12,52 @@ public class JwtTokenUtil {
     @Value("${jwt.secret}")
     private String jwtSecret;
 
-    @Value("${jwt.expiration}")
-    private long jwtExpirationMs;
+    @Value("${jwt.access-token-expiration}")
+    private long accessTokenExpiration;
 
-    public String generateToken(String username) {
+    @Value("${jwt.refresh-token-expiration}")
+    private long refreshTokenExpiration;
+
+
+    // Generate Access Token
+    public String generateAccessToken(String email) {
         return Jwts.builder()
-                .setSubject(username)
+                .setSubject(email)
                 .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis() + jwtExpirationMs))
+                .setExpiration(new Date(System.currentTimeMillis() + accessTokenExpiration))
                 .signWith(SignatureAlgorithm.HS512, jwtSecret)
                 .compact();
     }
 
-    public String getUsernameFromToken(String token) {
-        return Jwts.parser().setSigningKey(jwtSecret)
-                .parseClaimsJws(token)
-                .getBody()
-                .getSubject();
+    // Generate Refresh Token
+    public String generateRefreshToken(String email) {
+        return Jwts.builder()
+                .setSubject(email)
+                .setIssuedAt(new Date())
+                .setExpiration(new Date(System.currentTimeMillis() + refreshTokenExpiration))
+                .signWith(SignatureAlgorithm.HS512, jwtSecret)
+                .compact();
     }
 
-    public boolean validateJwtToken(String token) {
+    // Validate token
+    public boolean validateToken(String token) {
         try {
-            Jwts.parser().setSigningKey(jwtSecret).parseClaimsJws(token);
+            Jwts.parserBuilder()
+                    .setSigningKey(jwtSecret)
+                    .build()
+                    .parseClaimsJws(token);
             return true;
-        } catch (JwtException ex) {
+        } catch (JwtException | IllegalArgumentException e) {
             return false;
         }
+    }
+
+    public String getEmailFromToken(String token) {
+        Claims claims = Jwts.parserBuilder()
+                .setSigningKey(jwtSecret)
+                .build()
+                .parseClaimsJws(token)
+                .getBody();
+        return claims.getSubject();
     }
 }
