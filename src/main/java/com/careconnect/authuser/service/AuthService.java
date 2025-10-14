@@ -7,8 +7,11 @@ import com.careconnect.authuser.entity.UserToken;
 import com.careconnect.authuser.repository.UserRepository;
 import com.careconnect.authuser.repository.UserTokenRepository;
 import com.careconnect.authuser.security.JwtTokenUtil;
+import io.jsonwebtoken.ExpiredJwtException;
+import jakarta.persistence.EntityExistsException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.*;
+import org.springframework.security.authentication.ott.InvalidOneTimeTokenException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,7 +30,7 @@ public class AuthService {
 
     public void register(RegisterRequest request) {
         if (userRepository.existsByEmail(request.getEmail()))
-            throw new RuntimeException("Email already registered");
+            throw new EntityExistsException("Email already registered");
 
         User user = User.builder()
                 .email(request.getEmail())
@@ -48,9 +51,6 @@ public class AuthService {
         User user = userRepository.findByEmail(loginRequest.email())
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        if (!passwordEncoder.matches(loginRequest.password(), user.getPassword())) {
-            throw new RuntimeException("Invalid credentials");
-        }
 
         String accessToken = jwtTokenUtil.generateAccessToken(user.getEmail());
         String refreshToken = jwtTokenUtil.generateRefreshToken(user.getEmail());
@@ -83,19 +83,21 @@ public class AuthService {
                 .orElseThrow(() -> new RuntimeException("Invalid refresh token"));
 
         if (token.isInvalidated() || token.getTokenType() != TokenType.REFRESH_TOKEN)
-            throw new RuntimeException("Invalid or revoked refresh token");
+            throw new InvalidOneTimeTokenException("Invalid or revoked refresh token");
 
         if (token.getExpiresAt().isBefore(LocalDateTime.now()))
-            throw new RuntimeException("Refresh token has expired, please log in again");
+            throw new ExpiredJwtException(null, null, "Refresh Token expired");
 
         if (!jwtTokenUtil.validateToken(refreshToken)) {
-            throw new RuntimeException("Invalid refresh token");
+            throw new InvalidOneTimeTokenException("Expired refresh token");
         }
 
         String email = jwtTokenUtil.getEmailFromToken(refreshToken);
         String newAccessToken = jwtTokenUtil.generateAccessToken(email);
+        User user= userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
         userTokenRepository.save(UserToken.builder()
-                .user(userRepository.findByEmail(email).get())
+                .user(user)
                 .token(newAccessToken)
                 .tokenType(TokenType.ACCESS_TOKEN)
                 .invalidated(false)
@@ -106,35 +108,21 @@ public class AuthService {
 
     @Transactional
     public void logout(String accessToken) {
-        userTokenRepository.findByToken(accessToken).ifPresent(at -> {
-            at.setInvalidated(true);
-            userTokenRepository.save(at);
+        userTokenRepository.findByToken(accessToken).ifPresent(userAccessToken -> {
+            // Invalidate access token
+            userAccessToken.setInvalidated(true);
+            userTokenRepository.save(userAccessToken);
 
-            // Invalidate corresponding refresh token for the same user
-            userTokenRepository.findByUserIdAndTokenTypeAndInvalidatedFalse(at.getUser().getId(), TokenType.REFRESH_TOKEN)
-                    .ifPresent(rt -> {
-                        rt.setInvalidated(true);
-                        userTokenRepository.save(rt);
-                    });
+            // Invalidate refresh tokens for same user
+            userTokenRepository.findByUserIdAndTokenTypeAndInvalidatedFalse(
+                    userAccessToken.getUser().getId(),
+                    TokenType.REFRESH_TOKEN
+            ).ifPresent(refreshTokens -> {
+                refreshTokens.forEach(refreshToken -> {
+                    refreshToken.setInvalidated(true);
+                    userTokenRepository.save(refreshToken);
+                });
+            });
         });
-
     }
 }
-//    @Transactional
-//    public void logout(BlacklistedToken blacklistedToken) {
-//        // 1️⃣ Revoke refresh token
-//        refreshTokenRepository.findByToken(refreshToken).ifPresent(rt -> {
-//            rt.setRevoked(true);
-//            refreshTokenRepository.save(rt);
-//        });
-//
-//        // 2️⃣ Blacklist access token
-//        if (accessToken != null && jwtTokenUtil.validateToken(accessToken)) {
-//            BlacklistedToken blacklisted = BlacklistedToken.builder()
-//                    .token(accessToken)
-//                    .expiryDate(Instant.ofEpochMilli(jwtTokenUtil.getExpiryDateFromToken(accessToken).getTime()))
-//                    .build();
-//            blacklistedTokenRepository.save(blacklisted);
-//        }
-
-

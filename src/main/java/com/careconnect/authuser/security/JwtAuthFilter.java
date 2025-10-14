@@ -54,8 +54,8 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         }
 
         // ✅ Validate token and set authentication
-        if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            if (jwtTokenUtil.validateToken(token)) {
+        if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null && jwtTokenUtil.validateToken(token)) {
+
                 com.careconnect.authuser.entity.User dbUser =
                         userRepository.findByEmail(userEmail).orElse(null);
 
@@ -70,10 +70,9 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                     authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(authToken);
                 }
-            }
+
         }
 
-        // ✅ This is VERY important: continue filter chain
         filterChain.doFilter(request, response);
     }
 }

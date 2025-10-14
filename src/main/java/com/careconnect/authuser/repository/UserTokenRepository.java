@@ -13,5 +13,5 @@ public interface UserTokenRepository extends JpaRepository<UserToken, Long> {
 
     List<UserToken> findAllByUserIdAndInvalidatedFalse(Long userId);
 
-    Optional<UserToken> findByUserIdAndTokenTypeAndInvalidatedFalse(Long userId, TokenType tokenType);
+    Optional<List<UserToken>> findByUserIdAndTokenTypeAndInvalidatedFalse(Long userId, TokenType tokenType);
 }

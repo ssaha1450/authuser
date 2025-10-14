@@ -1,6 +1,6 @@
 package com.careconnect.authuser.entity;
 
-import com.careconnect.authuser.entity.TokenType;
+
 import jakarta.persistence.*;
 import lombok.*;
 

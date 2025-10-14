@@ -16,8 +16,8 @@ server:
 
 jwt:
   secret: aZ9f3kxk2VaDKtp81Gxbs9pG2eJl/s4ToOlzuyJExQFkjgx6nYp57VNk7SLFCUKaiW1f5WJLx1TaMy8Q4Z6AOA==
-  access-token-expiration: 3600000  # 1 hour in ms
-  refresh-token-expiration: 14400000  # 4 hours in ms
+  access-token-expiration: 900000        # 15 mins in ms
+  refresh-token-expiration: 604800000    # 7 days in ms
 
 logging:
   level:
