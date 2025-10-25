@@ -3,7 +3,6 @@ package com.careconnect.authuser.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.util.Set;
 
 @Entity
 @Table(name = "users")
